@@ -48,8 +48,9 @@ async function incrementCounter(counterKey) {
     p_referrer: document.referrer || null
   });
   if (error) {
-    console.error(error);
-    setStatus("點閱數更新失敗：請確認 SQL、RLS 與 RPC 權限是否已完成設定。");
+    console.error("P101 RPC error:", error);
+    const detail = [error.message, error.details, error.hint, error.code].filter(Boolean).join("｜");
+    setStatus("點閱數更新失敗：" + detail);
     return null;
   }
   const row = Array.isArray(data) ? data[0] : data;
@@ -69,8 +70,9 @@ async function loadCounters() {
     .in("counter_key", keys);
 
   if (error) {
-    console.error(error);
-    setStatus("點閱數讀取失敗：請確認資料表名稱與 Select policy。");
+    console.error("P101 load counter error:", error);
+    const detail = [error.message, error.details, error.hint, error.code].filter(Boolean).join("｜");
+    setStatus("點閱數讀取失敗：" + detail);
     return;
   }
   data.forEach(row => {
