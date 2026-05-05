@@ -1,147 +1,122 @@
-const PROJECTS = [
-  {
-    code: "P101",
-    title: "校園空間查詢系統",
-    desc: "提供校園空間快速查詢，協助新生、訪客與師生辨識空間名稱、位置與用途。",
-    latestVersion: "V02",
-    versions: [
-      { version: "V01", label: "初版展示", url: "#", counterKey: "P101_VERSION_V01" },
-      { version: "V02", label: "最新版", url: "https://liu-ming-yi.github.io/CampusMap01", counterKey: "P101_VERSION_V02" }
-    ]
+(function(){
+  const COUNTER_KEYS = ["P101_MAIN_PAGE", "P101_V01", "P101_V02"];
+  const KEY_LABELS = {
+    P101_MAIN_PAGE: "主頁",
+    P101_V01: "P101 V01",
+    P101_V02: "P101 V02"
+  };
+
+  const statusEl = document.getElementById("systemStatus");
+  const sessionId = getOrCreateSessionId();
+
+  function setStatus(message, type){
+    if(!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.classList.remove("ok", "error");
+    if(type) statusEl.classList.add(type);
   }
-];
 
-const PAGE_COUNTER_KEY = "P101_MAIN_PAGE";
-const counters = new Map();
-let supabaseClient = null;
-
-function getSessionId() {
-  const key = "sbi_lab_session_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
-    localStorage.setItem(key, id);
+  function getOrCreateSessionId(){
+    const key = "SBI_LAB_SESSION_ID";
+    let value = localStorage.getItem(key);
+    if(!value){
+      value = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+      localStorage.setItem(key, value);
+    }
+    return value;
   }
-  return id;
-}
 
-function setStatus(message) {
-  const el = document.querySelector("#status");
-  if (el) el.textContent = message || "";
-}
-
-function initSupabase() {
-  if (!window.SBI_CONFIG || !window.SBI_CONFIG.SUPABASE_URL || window.SBI_CONFIG.SUPABASE_URL.includes("YOUR_PROJECT_ID")) {
-    setStatus("尚未設定 Supabase。請複製 config.example.js 為 config.js，並填入 SUPABASE_URL 與 SUPABASE_ANON_KEY。");
-    return null;
+  function getClient(){
+    if(!window.SBI_CONFIG){
+      throw new Error("找不到 config.js 或 window.SBI_CONFIG。請確認已將 config.example.js 複製為 config.js。 ");
+    }
+    const url = window.SBI_CONFIG.SUPABASE_URL;
+    const key = window.SBI_CONFIG.SUPABASE_ANON_KEY;
+    if(!url || !key || url.includes("YOUR_PROJECT_ID") || key.includes("YOUR_SUPABASE")){
+      throw new Error("config.js 尚未填入 Supabase URL 或 anon key。 ");
+    }
+    if(!window.supabase || !window.supabase.createClient){
+      throw new Error("Supabase JS CDN 尚未載入。請確認網路可連到 jsdelivr。 ");
+    }
+    return window.supabase.createClient(url, key);
   }
-  supabaseClient = window.supabase.createClient(window.SBI_CONFIG.SUPABASE_URL, window.SBI_CONFIG.SUPABASE_ANON_KEY);
-  return supabaseClient;
-}
 
-async function incrementCounter(counterKey) {
-  if (!supabaseClient) return null;
-  const rpcName = window.SBI_CONFIG.COUNTER_RPC || "p101_increment_counter";
-  const { data, error } = await supabaseClient.rpc(rpcName, {
-    p_counter_key: counterKey,
-    p_session_id: getSessionId(),
-    p_referrer: document.referrer || null
-  });
-  if (error) {
-    console.error("P101 RPC error:", error);
-    const detail = [error.message, error.details, error.hint, error.code].filter(Boolean).join("｜");
-    setStatus("點閱數更新失敗：" + detail);
-    return null;
+  async function loadCounts(client){
+    const { data, error } = await client
+      .from("TblP101Counters")
+      .select("counter_key, view_count")
+      .in("counter_key", COUNTER_KEYS);
+
+    if(error) throw error;
+    updateCountUI(data || []);
   }
-  const row = Array.isArray(data) ? data[0] : data;
-  if (row && row.counter_key) {
-    counters.set(row.counter_key, Number(row.view_count || 0));
-    updateCounterDisplay(row.counter_key, row.view_count);
+
+  function updateCountUI(rows){
+    const map = new Map(rows.map(r => [r.counter_key, r.view_count]));
+    setText("mainPageCount", map.get("P101_MAIN_PAGE") ?? 0);
+    setText("count-P101_V01", map.get("P101_V01") ?? 0);
+    setText("count-P101_V02", map.get("P101_V02") ?? 0);
+    const total = Number(map.get("P101_V01") ?? 0) + Number(map.get("P101_V02") ?? 0);
+    setText("p101TotalCount", total);
   }
-  return row;
-}
 
-async function loadCounters() {
-  if (!supabaseClient) return;
-  const keys = [PAGE_COUNTER_KEY, ...PROJECTS.flatMap(p => p.versions.map(v => v.counterKey))];
-  const { data, error } = await supabaseClient
-    .from("TblP101ViewCounters")
-    .select("counter_key, view_count")
-    .in("counter_key", keys);
-
-  if (error) {
-    console.error("P101 load counter error:", error);
-    const detail = [error.message, error.details, error.hint, error.code].filter(Boolean).join("｜");
-    setStatus("點閱數讀取失敗：" + detail);
-    return;
+  function setText(id, value){
+    const el = document.getElementById(id);
+    if(el) el.textContent = value;
   }
-  data.forEach(row => {
-    counters.set(row.counter_key, Number(row.view_count || 0));
-    updateCounterDisplay(row.counter_key, row.view_count);
-  });
-}
 
-function updateCounterDisplay(counterKey, value) {
-  document.querySelectorAll(`[data-counter="${counterKey}"]`).forEach(el => {
-    el.textContent = Number(value || 0).toLocaleString("zh-TW");
-  });
-}
-
-function renderProjects() {
-  const root = document.querySelector("#projects");
-  root.innerHTML = PROJECTS.map(project => {
-    const latest = project.versions.find(v => v.version === project.latestVersion);
-    return `
-      <article class="project-card">
-        <div class="project-visual" aria-hidden="true"></div>
-        <div class="project-body">
-          <div class="project-code">${project.code}</div>
-          <h3 class="project-title">${project.title}</h3>
-          <p class="project-desc">${project.desc}</p>
-          <div class="actions">
-            <a class="btn primary js-track-link" href="${latest.url}" data-counter-key="${latest.counterKey}" target="_blank" rel="noopener noreferrer">
-              開啟最新版 ${latest.version}
-            </a>
-          </div>
-          <div class="version-list">
-            ${project.versions.map(v => `
-              <div class="version-row">
-                <a class="js-track-link" href="${v.url}" data-counter-key="${v.counterKey}" target="_blank" rel="noopener noreferrer">
-                  ${v.version}｜${v.label}
-                </a>
-                <span class="small-counter">點閱 <span data-counter="${v.counterKey}">0</span> 次</span>
-              </div>
-            `).join("")}
-          </div>
-        </div>
-      </article>
-    `;
-  }).join("");
-}
-
-function bindTrackLinks() {
-  document.querySelectorAll(".js-track-link").forEach(link => {
-    link.addEventListener("click", async event => {
-      const url = link.getAttribute("href");
-      const counterKey = link.dataset.counterKey;
-      if (!url || url === "#") {
-        event.preventDefault();
-        setStatus("此版本尚未設定正式網址。若要啟用，請在 assets/app.js 填入 URL。 ");
-        return;
-      }
-      event.preventDefault();
-      await incrementCounter(counterKey);
-      window.open(url, "_blank", "noopener,noreferrer");
+  async function increment(client, counterKey){
+    const { data, error } = await client.rpc("p101_increment_counter", {
+      p_counter_key: counterKey,
+      p_referrer: document.referrer || null,
+      p_session_id: sessionId
     });
-  });
-}
+    if(error) throw error;
+    if(Array.isArray(data) && data.length > 0){
+      await loadCounts(client);
+    }
+  }
 
-async function main() {
-  renderProjects();
-  bindTrackLinks();
-  initSupabase();
-  await loadCounters();
-  await incrementCounter(PAGE_COUNTER_KEY);
-}
+  async function init(){
+    try{
+      setStatus("SBI Lab counter v4 clean 已載入，正在連線 Supabase……");
+      const client = getClient();
+      await increment(client, "P101_MAIN_PAGE");
+      await loadCounts(client);
+      setStatus("點閱數系統已正常連線。", "ok");
 
-document.addEventListener("DOMContentLoaded", main);
+      document.querySelectorAll(".version-item[data-counter-key]").forEach(link => {
+        link.addEventListener("click", async function(event){
+          event.preventDefault();
+          const counterKey = this.dataset.counterKey;
+          const externalUrl = this.dataset.externalUrl;
+          try{
+            setStatus(`正在記錄 ${KEY_LABELS[counterKey] || counterKey} 點閱……`);
+            await increment(client, counterKey);
+            setStatus(`${KEY_LABELS[counterKey] || counterKey} 點閱已記錄。`, "ok");
+            if(externalUrl && externalUrl !== "#"){
+              window.open(externalUrl, "_blank", "noopener");
+            }
+          }catch(err){
+            console.error(err);
+            setStatus("點閱數更新失敗：" + formatError(err), "error");
+            if(externalUrl && externalUrl !== "#"){
+              window.open(externalUrl, "_blank", "noopener");
+            }
+          }
+        });
+      });
+    }catch(err){
+      console.error(err);
+      setStatus("點閱數初始化失敗：" + formatError(err), "error");
+    }
+  }
+
+  function formatError(err){
+    if(!err) return "未知錯誤";
+    const parts = [err.message, err.details, err.hint, err.code].filter(Boolean);
+    return parts.join("｜") || String(err);
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();

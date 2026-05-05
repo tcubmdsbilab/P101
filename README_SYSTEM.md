@@ -1,73 +1,52 @@
-# README_SYSTEM｜SBI Lab P101 Counter Website
+# SBI Lab P101 Counter Website v4 Clean
 
-## Project Identity
+本套件是「智慧商情研究室 Smart Business Intelligence Lab」入口網站的乾淨重建版本，包含 GitHub Pages 前端、Supabase SQL、點閱數 RPC 與系統說明。
 
-- Website: 智慧商情研究室入口網站
-- English Name: Smart Business Intelligence Lab (SBI Lab)
-- Unit: 慈濟大學 經營管理學系
-- Current project displayed: P101 校園空間查詢系統
-- Current latest version: V02
-- V02 URL: https://liu-ming-yi.github.io/CampusMap01
+## 檔案結構
 
-## Current Function
-
-This package is a GitHub Pages static website with Supabase-backed counters.
-
-It supports:
-
-1. Main page view counter.
-2. Version click counters.
-3. P101 V01 and V02 display under the same project card.
-4. V02 as the primary latest-version link.
-5. Historical version preservation.
-
-## Naming Rules
-
-All database objects for this project use the P101 prefix.
-
-Tables:
-
-- `TblP101ViewCounters`
-- `TblP101ViewEvents`
-
-RPC function:
-
-- `p101_increment_counter`
-
-Counter keys:
-
-- `P101_MAIN_PAGE`
-- `P101_VERSION_V01`
-- `P101_VERSION_V02`
-
-## Frontend Files
-
-- `index.html`: main page.
-- `assets/styles.css`: visual design.
-- `assets/app.js`: project data and counter logic.
-- `config.example.js`: copy to `config.js` and fill in Supabase settings.
-
-## Deployment Rule
-
-Never place a Supabase service_role key in frontend files. Only the anon key may be used in `config.js`.
-
-## Counter Rule
-
-The frontend must not directly update counter rows. It must call the RPC function:
-
-```javascript
-p101_increment_counter(counter_key, session_id, referrer)
+```text
+sbi_lab_p101_clean_v4/
+├─ index.html
+├─ config.example.js
+├─ assets/
+│  ├─ styles.css
+│  └─ app.js
+├─ sql/
+│  └─ 01_reset_and_create_p101_counter.sql
+└─ docs/
+   └─ SYSTEM_SPECIFICATION.md
 ```
 
-This preserves atomic counting and keeps the write path controlled.
+## 安裝步驟
 
-## Future Upgrade Direction
+1. 到 Supabase SQL Editor 執行：
+   `sql/01_reset_and_create_p101_counter.sql`
 
-If this website expands beyond P101, consider changing from P101-specific tables to general lab-level tables such as:
+2. 將 `config.example.js` 複製成 `config.js`。
 
-- `TblSBIProjects`
-- `TblSBIProjectVersions`
-- `TblSBIViewCounters`
-- `TblSBIViewEvents`
+3. 在 `config.js` 填入：
 
-For the current request, table names intentionally keep the P101 prefix.
+```js
+window.SBI_CONFIG = {
+  SUPABASE_URL: "https://你的專案代碼.supabase.co",
+  SUPABASE_ANON_KEY: "你的 anon public key"
+};
+```
+
+4. 將整個資料夾內容上傳到 GitHub repository。
+
+5. GitHub Pages 啟用 main branch / root。
+
+## 目前 P101 版本
+
+- P101_MAIN_PAGE：智慧商情研究室入口主頁點閱
+- P101_V01：歷史版本，暫無外部網址
+- P101_V02：最新版本，連至 https://liu-ming-yi.github.io/CampusMap01
+
+## 重要原則
+
+- 前端只放 Supabase anon key，不可放 service_role key。
+- 點閱累加透過 RPC：`p101_increment_counter(p_counter_key, p_referrer, p_session_id)`。
+- 前端使用的資料表是 `TblP101Counters`。
+- 事件紀錄資料表是 `TblP101Events`。
+- 本版 SQL 會刪除舊版 `TblP101ViewCounters`、`TblP101ViewEvents` 等可能殘留的舊表。

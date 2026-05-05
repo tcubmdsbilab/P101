@@ -1,233 +1,137 @@
-# 智慧商情研究室入口網站 P101 點閱數系統說明書
+# 智慧商情研究室入口網站 P101 點閱數系統說明書 v4 Clean
 
 ## 1. 系統目的
 
-本系統是「智慧商情研究室 Smart Business Intelligence Lab (SBI Lab)」入口網站的第一版雛形，重點功能包括：
+本系統用於建立「智慧商情研究室 Smart Business Intelligence Lab」入口網站，並展示學生作品。第一個學生作品為 P101 校園空間查詢系統。系統支援主頁點閱數與各版本點閱數統計。
 
-1. 展示研究室名稱、理念與目標。
-2. 展示學生作品。
-3. 支援同一學生作品的多版本保存，例如 P101 V01、P101 V02。
-4. 以最新版本作為主要入口，同時保留歷史版本連結。
-5. 顯示主網頁點閱次數。
-6. 顯示各版本連結被點閱的累計次數。
+## 2. 網站內容
 
-本版本採用 GitHub Pages 靜態網頁 + Supabase PostgreSQL 資料庫。
+首頁大標題：
 
----
+- 智慧商情研究室
+- Smart Business Intelligence Lab (SBI Lab)
+- Learn. Analyze. Innovate.
+- 慈濟大學 經營管理學系
+- 來打造一個可參訪的好玩實驗室吧
 
-## 2. 技術架構
+研究室目標：
 
-### 2.1 前端
+1. 管理智慧商情研究室
+2. 管理智慧商店設備
+3. 設計開發商情專案，管理商情伺服器
+4. 協助經營管理學系專題製作或相關課程
+5. 參與智慧商情相關計畫或研究
 
-- `index.html`：首頁。
-- `assets/styles.css`：日式文青風格版面，主色為淺藍與淺棕黃。
-- `assets/app.js`：專案資料、版本連結、點閱數讀取與累加邏輯。
-- `config.js`：Supabase URL 與 anon key 設定檔。此檔需由 `config.example.js` 複製而來。
+學生作品：
 
-### 2.2 後端資料庫
+- P101 校園空間查詢系統
+- V01：歷史版本，保留展示
+- V02：最新版本，主要連結為 https://liu-ming-yi.github.io/CampusMap01
 
-使用 Supabase PostgreSQL，主要資料表如下：
+## 3. 設計風格
 
-1. `TblP101ViewCounters`
-   - 保存每一個計數目標的累計點閱數。
-   - 例如：主網頁、P101 V01、P101 V02。
+本版採用淡藍色系為主，搭配少量淡棕黃作為溫暖輔色。整體風格希望比前一版更明亮、活潑、可參訪，適合作為學生專題與研究室入口展示頁。
 
-2. `TblP101ViewEvents`
-   - 保存每一次點閱事件。
-   - 日後可用於分析點閱時間、來源、版本比較等。
+## 4. 前端技術
 
-3. `p101_increment_counter()`
-   - Supabase RPC 函數。
-   - 前端呼叫此函數進行點閱累加。
-   - 使用 PostgreSQL update 原子累加，避免多人同時點擊時遺失計數。
+- 純 HTML / CSS / JavaScript
+- 可部署於 GitHub Pages
+- 使用 Supabase JS v2 CDN
+- 前端設定檔為 `config.js`
 
----
+## 5. Supabase 資料庫設計
 
-## 3. 檔案結構
+### 5.1 TblP101Counters
 
-```text
-sbi_lab_p101_counter/
-├── index.html
-├── config.example.js
-├── assets/
-│   ├── app.js
-│   └── styles.css
-├── sql/
-│   └── 01_create_p101_counters.sql
-└── docs/
-    └── SYSTEM_SPECIFICATION.md
-```
+用途：儲存每一個可計數目標的累計點閱數。
 
----
+欄位：
 
-## 4. 安裝與部署步驟
+- counter_key：主鍵，例如 P101_MAIN_PAGE、P101_V01、P101_V02
+- project_code：固定為 P101
+- target_type：page 或 version
+- version_code：版本代號，例如 V01、V02；主頁為 NULL
+- target_title：顯示名稱
+- target_url：版本外部網址
+- view_count：累計點閱數
+- created_at：建立時間
+- updated_at：更新時間
 
-### 4.1 建立 Supabase 資料表
+### 5.2 TblP101Events
 
-1. 進入 Supabase 專案。
-2. 打開 SQL Editor。
-3. 貼上並執行：
+用途：記錄每一次點閱事件，方便未來分析。
 
-```text
-sql/01_create_p101_counters.sql
-```
+欄位：
 
-執行後會建立：
+- id：流水號
+- counter_key：對應 TblP101Counters.counter_key
+- project_code：固定為 P101
+- target_type：page 或 version
+- version_code：版本代號
+- referrer：來源網址
+- session_id：前端 localStorage 產生的匿名 session id
+- user_agent：保留欄位，本版未由前端寫入
+- clicked_at：點閱時間
 
-- `TblP101ViewCounters`
-- `TblP101ViewEvents`
-- `p101_increment_counter()`
-- RLS policy 與必要權限
+## 6. RPC 設計
 
-### 4.2 設定前端 config.js
-
-將：
+前端只呼叫一個 RPC：
 
 ```text
-config.example.js
+p101_increment_counter(p_counter_key text, p_referrer text, p_session_id text)
 ```
 
-複製為：
+功能：
 
-```text
-config.js
-```
+1. 檢查 counter_key 是否存在。
+2. 將 TblP101Counters.view_count 加 1。
+3. 將事件寫入 TblP101Events。
+4. 回傳更新後的 counter_key 與 view_count。
 
-並填入：
+## 7. RLS 與權限
 
-```javascript
-window.SBI_CONFIG = {
-  SUPABASE_URL: "https://YOUR_PROJECT_ID.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR_SUPABASE_ANON_KEY",
-  COUNTER_RPC: "p101_increment_counter"
-};
-```
+- TblP101Counters：允許 anon / authenticated SELECT。
+- TblP101Events：不開放直接 INSERT；事件寫入由 SECURITY DEFINER RPC 執行。
+- RPC p101_increment_counter：授權 anon / authenticated 執行。
 
-注意：
+此設計避免前端直接任意寫入事件表，同時保留公開網站可累計點閱數的便利性。
 
-- `SUPABASE_ANON_KEY` 可放在 GitHub Pages。
-- 不可把 `service_role key` 放到任何前端檔案。
+## 8. 前端點閱邏輯
 
-### 4.3 部署到 GitHub Pages
+頁面載入時：
 
-1. 建立 GitHub repository。
-2. 上傳整個資料夾內容。
-3. 確認根目錄包含 `index.html`。
-4. 到 repository 的 Settings → Pages。
-5. Source 選擇 main branch。
-6. 等待 GitHub Pages 產生網址。
+1. 初始化 Supabase client。
+2. 自動呼叫 RPC 累加 P101_MAIN_PAGE。
+3. 讀取 P101_MAIN_PAGE、P101_V01、P101_V02 的目前點閱數。
 
----
+使用者點擊 V01 / V02 時：
 
-## 5. 點閱數運作方式
+1. 攔截點擊。
+2. 呼叫 RPC 累加該版本的 counter_key。
+3. 更新頁面點閱數。
+4. 如果該版本有外部網址，開啟新分頁。
 
-### 5.1 主網頁點閱數
+## 9. 除錯訊息
 
-使用計數器：
+頁面下方會顯示狀態訊息，例如：
 
-```text
-P101_MAIN_PAGE
-```
+- SBI Lab counter v4 clean 已載入，正在連線 Supabase……
+- 點閱數系統已正常連線。
+- 點閱數初始化失敗：...
+- 點閱數更新失敗：...
 
-當使用者進入首頁時，前端會呼叫：
+若出現錯誤，請優先檢查：
 
-```javascript
-p101_increment_counter('P101_MAIN_PAGE')
-```
+1. SQL 是否完整執行。
+2. `config.js` 是否存在。
+3. Supabase URL 是否為 `https://xxxx.supabase.co`，不可加 `/rest/v1`。
+4. anon key 是否正確。
+5. GitHub Pages 是否已更新到 v4 檔案。
 
-資料庫會將主網頁的 `view_count` 加 1。
+## 10. 未來擴充方向
 
-### 5.2 版本連結點閱數
-
-目前 P101 有兩個版本：
-
-| 專案 | 版本 | counter_key | URL |
-|---|---|---|---|
-| P101 | V01 | P101_VERSION_V01 | 尚未設定 |
-| P101 | V02 | P101_VERSION_V02 | https://liu-ming-yi.github.io/CampusMap01 |
-
-當使用者點選 V02 時，前端會先呼叫：
-
-```javascript
-p101_increment_counter('P101_VERSION_V02')
-```
-
-完成後再開啟外部連結。
-
----
-
-## 6. 新增版本的方法
-
-若未來新增 P101 V03，需要修改兩個地方。
-
-### 6.1 SQL 新增 counter
-
-```sql
-insert into public."TblP101ViewCounters"
-  (counter_key, label, target_type, project_code, version_code, target_url)
-values
-  ('P101_VERSION_V03', 'P101 校園空間查詢系統 V03 最新版', 'VERSION', 'P101', 'V03', 'https://your-v03-url')
-on conflict (counter_key) do update set
-  label = excluded.label,
-  target_type = excluded.target_type,
-  project_code = excluded.project_code,
-  version_code = excluded.version_code,
-  target_url = excluded.target_url;
-```
-
-### 6.2 修改 `assets/app.js`
-
-在 `PROJECTS` 的 `versions` 陣列中新增：
-
-```javascript
-{ version: "V03", label: "最新版", url: "https://your-v03-url", counterKey: "P101_VERSION_V03" }
-```
-
-並將：
-
-```javascript
-latestVersion: "V02"
-```
-
-改為：
-
-```javascript
-latestVersion: "V03"
-```
-
----
-
-## 7. 資安與資料治理說明
-
-本系統沒有登入功能，因此所有訪客都可以讀取累計點閱數。此設計適合公開展示網站。
-
-但系統不允許前端直接 update 點閱累計表，而是透過 RPC 函數 `p101_increment_counter()` 進行累加。這樣做有三個好處：
-
-1. 避免前端任意修改累計數。
-2. 降低多人同時點擊時的計數錯誤。
-3. 保留未來擴充事件分析的可能性。
-
-目前事件表 `TblP101ViewEvents` 不開放公開讀取，避免未來擴充欄位後產生隱私疑慮。
-
----
-
-## 8. 目前限制
-
-1. 點閱數不是唯一訪客數，而是累計點擊次數。
-2. 同一使用者重新整理首頁，主網頁點閱數仍會增加。
-3. 若使用者阻擋 JavaScript，點閱數不會累加。
-4. 若外部連結被瀏覽器阻擋彈出視窗，使用者可能需要允許新分頁。
-5. V01 目前尚未設定正式 URL，因此點擊不會累加並開啟連結。
-
----
-
-## 9. 後續建議
-
-下一版可考慮：
-
-1. 將學生作品資料移入 Supabase，由後台管理。
-2. 建立 P101、P102、P103 等多專案通用表格。
-3. 增加「年度／屆別／學生姓名／指導老師」欄位。
-4. 增加圖像上傳與專案簡介頁。
-5. 建立管理後台，讓老師或助理更新專案版本。
-6. 區分 page view、link click、unique session view。
+- 新增 P102、P103 等學生作品。
+- 將作品資料改為由 Supabase 管理。
+- 增加管理後台，讓教師或學生新增專案版本。
+- 增加每月點閱統計與圖表。
+- 增加作品頁面的版本時間軸。
