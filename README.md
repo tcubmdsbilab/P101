@@ -8,7 +8,7 @@
 - 英文名稱：Smart Business Intelligence Lab (SBI Lab)
 - 單位英文正式名稱：Department of Business Management, Tzu Chi University
 - 標語：Learn. Analyze. Innovate.
-- 風格：美式專業智庫風 + 復古學術風
+- 風格：創創基地風（日系教育空間風 + 北歐共同工作空間風 + 台灣公共教育設計風）
 
 ## 二、學生作品
 
@@ -27,7 +27,7 @@
 ## 三、檔案結構
 
 ```text
-P101_sbi_lab_portal_v6_list/
+P101_sbi_lab_portal_v7_innobase_style/
 ├─ index.html
 ├─ config.sample.js
 ├─ assets/
