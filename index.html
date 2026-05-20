@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>智慧商情研究室 SBI Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=4" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>智慧商情研究室｜SBI Lab</title>
+  <meta name="description" content="智慧商情研究室 Smart Business Intelligence Lab 入口網站，展示學生作品與研究室目標。" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body>
-  <div class="page-bg"></div>
   <header class="hero">
-    <nav class="topbar">
+    <nav class="topbar" aria-label="主要導覽">
       <div class="brand-mark">SBI</div>
       <div class="nav-links">
         <a href="#goals">研究室目標</a>
@@ -18,87 +18,55 @@
     </nav>
 
     <section class="hero-inner">
-      <div class="hero-copy">
-        <p class="eyebrow">Tzu Chi University · Department of Business Administration</p>
-        <h1>智慧商情研究室</h1>
-        <h2>Smart Business Intelligence Lab <span>(SBI Lab)</span></h2>
-        <p class="tagline">Learn. Analyze. Innovate.</p>
-        <p class="lead">慈濟大學 經營管理學系</p>
-        <p class="vision">來打造一個可參訪的好玩實驗室吧</p>
-        <div class="hero-actions">
-          <a class="primary-btn" href="#projects">瀏覽學生作品</a>
-          <span class="counter-pill">本頁點閱：<strong id="mainPageCount">讀取中</strong></span>
+      <p class="eyebrow">Department of Business Management · Tzu Chi University</p>
+      <h1>智慧商情研究室</h1>
+      <h2>Smart Business Intelligence Lab <span>(SBI Lab)</span></h2>
+      <p class="motto">Learn. Analyze. Innovate.</p>
+      <p class="vision">來打造一個可參訪的好玩實驗室吧</p>
+
+      <div class="hero-actions">
+        <a class="primary-btn" href="#projects">瀏覽學生作品</a>
+        <div class="page-counter" aria-live="polite">
+          主網頁點閱：<strong data-counter="P101_MAIN_PAGE">—</strong>
         </div>
-        <p id="systemStatus" class="system-status">SBI Lab counter v4 clean 已載入。</p>
-      </div>
-      <div class="hero-art" aria-hidden="true">
-        <div class="circle c1"></div>
-        <div class="circle c2"></div>
-        <div class="card-float cf1">DATA</div>
-        <div class="card-float cf2">AI</div>
-        <div class="card-float cf3">BI</div>
       </div>
     </section>
   </header>
 
   <main>
-    <section id="goals" class="section panel goals-panel">
-      <div class="section-head">
+    <section id="goals" class="section goals-section">
+      <div class="section-heading">
         <p class="section-kicker">Mission</p>
-        <h3>智慧商情研究室目標</h3>
+        <h2>智慧商情研究室目標</h2>
       </div>
       <div class="goals-grid">
-        <article>管理智慧商情研究室</article>
-        <article>管理智慧商店設備</article>
-        <article>設計開發商情專案，管理商情伺服器</article>
-        <article>協助經營管理學系專題製作或相關課程</article>
-        <article>參與智慧商情相關計畫或研究</article>
+        <article class="goal-card"><span>01</span><p>管理智慧商情研究室</p></article>
+        <article class="goal-card"><span>02</span><p>管理智慧商店設備</p></article>
+        <article class="goal-card"><span>03</span><p>設計開發商情專案，管理商情伺服器</p></article>
+        <article class="goal-card"><span>04</span><p>協助經營管理學系專題製作或相關課程</p></article>
+        <article class="goal-card"><span>05</span><p>參與智慧商情相關計畫或研究</p></article>
       </div>
     </section>
 
-    <section id="projects" class="section">
-      <div class="section-head">
-        <p class="section-kicker">Student Works</p>
-        <h3>學生作品</h3>
-        <p>以最新版本作為主要展示入口，同時保留歷屆版本，記錄學生專題的演化軌跡。</p>
+    <section id="projects" class="section projects-section">
+      <div class="section-heading split-heading">
+        <div>
+          <p class="section-kicker">Student Works</p>
+          <h2>學生作品</h2>
+        </div>
+        <p class="section-note">作品以條列方式呈現；點擊作品名稱或版本連結會累計點閱數。</p>
       </div>
 
-      <div class="project-grid">
-        <article class="project-card">
-          <div class="project-banner campus-banner">
-            <span>Campus Space</span>
-          </div>
-          <div class="project-body">
-            <div class="project-title-row">
-              <h4>P101 校園空間查詢系統</h4>
-              <span class="latest-badge">Latest: V02</span>
-            </div>
-            <p>協助新生、訪客與校內成員快速查詢校園空間資訊，作為經營管理與空間服務設計的學生專題成果。</p>
-
-            <div class="project-counter">P101 專案總點閱：<strong id="p101TotalCount">讀取中</strong></div>
-
-            <div class="version-list">
-              <a class="version-item disabled" href="#" data-counter-key="P101_V01" data-external-url="#" aria-disabled="true">
-                <span><strong>V01</strong><small>歷史版本｜展示保留</small></span>
-                <em>點閱 <b id="count-P101_V01">讀取中</b></em>
-              </a>
-              <a class="version-item latest" href="https://liu-ming-yi.github.io/CampusMap01" target="_blank" rel="noopener" data-counter-key="P101_V02" data-external-url="https://liu-ming-yi.github.io/CampusMap01">
-                <span><strong>V02</strong><small>最新版本｜CampusMap01</small></span>
-                <em>點閱 <b id="count-P101_V02">讀取中</b></em>
-              </a>
-            </div>
-          </div>
-        </article>
-      </div>
+      <div id="projectGrid" class="project-grid" aria-live="polite"></div>
     </section>
   </main>
 
-  <footer>
-    <p>© Smart Business Intelligence Lab · Tzu Chi University</p>
+  <footer class="site-footer">
+    <p>智慧商情研究室｜Smart Business Intelligence Lab (SBI Lab)</p>
+    <p>Department of Business Management, Tzu Chi University</p>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=4"></script>
-  <script src="assets/app.js?v=4"></script>
+  <script src="config.js"></script>
+  <script src="assets/js/app.js?v=6"></script>
 </body>
 </html>
