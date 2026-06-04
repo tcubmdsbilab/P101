@@ -1,62 +1,45 @@
-# P101 部署逐步操作指引
+# P101 v8 部署步驟
 
-## Step 1：解壓縮 ZIP
+## 1. 執行 SQL
 
-解壓縮後應看到：
-
-```text
-P101_sbi_lab_portal_v6_list/
-```
-
-請保留此資料夾結構。
-
-## Step 2：建立 Supabase 資料表
-
-1. 登入 Supabase Dashboard。
-2. 進入對應專案。
-3. 開啟 SQL Editor。
-4. 貼上並執行：
+到 Supabase Dashboard → SQL Editor，執行：
 
 ```text
 sql/01_reset_create_P101_tables.sql
 ```
 
-注意：此 SQL 會刪除舊的 P101 點閱表與相關舊表，並重新建立乾淨版本。
+注意：此 SQL 會刪除並重建 P101 相關資料表，既有點閱數會歸零。
 
-## Step 3：建立 Edge Function
+## 2. 建立或更新 Edge Function
 
-1. 在 Supabase Dashboard 左側選單進入 Edge Functions。
-2. 建立新 Function。
-3. Function 名稱請填：
+到 Supabase Dashboard → Edge Functions。
+
+Function 名稱：
 
 ```text
 P101_increment_counter
 ```
 
-4. 將下列檔案內容完整貼入 Dashboard 編輯器：
+將以下檔案全文貼入：
 
 ```text
 edge-functions/P101_increment_counter/index.ts
 ```
 
-5. 儲存／部署 Function。
+## 3. 設定 Edge Function Secrets
 
-本專案不使用 CLI、不使用 `npx supabase functions deploy`、不使用 `_shared`。
-
-## Step 4：確認 Edge Function 環境變數
-
-Supabase Edge Function 通常可使用：
+在 Supabase Edge Function 的 Secrets / Environment Variables 設定：
 
 ```text
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_URL=你的 Supabase Project URL
+SUPABASE_SERVICE_ROLE_KEY=你的 service_role key
 ```
 
-如果 Dashboard 顯示缺少 service role key，請到 Supabase 的 Function Secrets 或 Project Settings 補上。
+注意：`service_role key` 只能放在 Supabase Edge Function 環境變數，不可放到 GitHub。
 
-## Step 5：建立 config.js
+## 4. 建立 config.js
 
-在網站根目錄中，將：
+將：
 
 ```text
 config.sample.js
@@ -68,30 +51,21 @@ config.sample.js
 config.js
 ```
 
-並填入自己的 Supabase URL 與 anon key：
+並填入：
 
 ```js
 window.P101_CONFIG = {
-  SUPABASE_URL: "https://your-project-id.supabase.co",
-  SUPABASE_ANON_KEY: "your-anon-public-key",
+  SUPABASE_URL: "https://你的專案.supabase.co",
+  SUPABASE_ANON_KEY: "你的 anon public key",
   COUNTER_FUNCTION: "P101_increment_counter"
 };
 ```
 
-注意：
+## 5. 上傳 GitHub Pages
 
-- 可以放 anon public key。
-- 不可放 service_role key。
-- 之後重新產生 ZIP 時，只會提供 `config.sample.js`，避免覆蓋您原本的 `config.js`。
+將整個網站資料夾內容上傳到 GitHub Pages repository。
 
-## Step 6：本機快速檢查
-
-可直接用瀏覽器開啟 `index.html`。若瀏覽器阻擋本機 script，可改用 VS Code Live Server 或上傳 GitHub Pages 後測試。
-
-## Step 7：部署到 GitHub Pages
-
-1. 建立或開啟 GitHub repository。
-2. 上傳下列檔案與資料夾：
+請確認包含：
 
 ```text
 index.html
@@ -99,44 +73,12 @@ config.js
 assets/
 ```
 
-3. repository Settings → Pages。
-4. Source 選擇 main branch。
-5. 等待 GitHub Pages 更新。
+## 6. 日後新增學生作品
 
-GitHub Pages 更新通常需要數十秒，且瀏覽器可能有快取。若測試新版，建議使用無痕視窗。
+日後新增作品不需要修改網頁，只需在 Supabase 資料表新增資料：
 
-## Step 8：測試點閱數
+1. 在 `P101_Projects` 新增作品主資料。
+2. 在 `P101_ProjectVersions` 新增版本資料。
+3. 在 `P101_ViewCounters` 新增對應 counter。
 
-1. 開啟 GitHub Pages 網址。
-2. 主頁點閱數應自動增加。
-3. 點擊任一作品版本，例如 P101 V02。
-4. 回到 Supabase Table Editor 檢查：
-
-```text
-P101_ViewCounters
-P101_ViewEvents
-```
-
-應可看到點閱數增加與事件紀錄。
-
-## Step 9：常見問題
-
-### 1. 畫面顯示 config.js 找不到
-
-請確認已將 `config.sample.js` 複製成 `config.js`。
-
-### 2. 點閱數更新失敗：Missing SUPABASE_SERVICE_ROLE_KEY
-
-請確認 Edge Function 可讀取 `SUPABASE_SERVICE_ROLE_KEY`。
-
-### 3. 點閱數沒有更新
-
-請確認：
-
-- Function 名稱是 `P101_increment_counter`
-- `config.js` 的 `COUNTER_FUNCTION` 也是 `P101_increment_counter`
-- SQL 已成功建立 `P101_ViewCounters` 與 `P101_ViewEvents`
-
-### 4. GitHub 更新後畫面還是舊版
-
-請等待 30–60 秒，或使用無痕視窗測試。
+若忘記新增 counter，Edge Function 會自動建立基本 counter，但建議仍由資料表完整維護。

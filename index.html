@@ -3,29 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>智慧商情研究室｜SBI Lab</title>
-  <meta name="description" content="智慧商情研究室 Smart Business Intelligence Lab 入口網站，展示學生作品與研究室目標。" />
+  <title>好玩實驗室｜智慧商情研究室</title>
+  <meta name="description" content="好玩實驗室，智慧商情研究室入口網站，展示學生作品與可參訪的研究室成果。" />
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body>
   <header class="hero">
-    <div class="floating-deco deco-sun" aria-hidden="true"></div>
-    <div class="floating-deco deco-dots" aria-hidden="true"></div>
-    <div class="floating-deco deco-leaf" aria-hidden="true"></div>
     <nav class="topbar" aria-label="主要導覽">
-      <div class="brand-mark">SBI</div>
+      <a class="brand-mark" href="#top" aria-label="回到首頁">InnoBase</a>
       <div class="nav-links">
-        <a href="#goals">研究室目標</a>
         <a href="#projects">學生作品</a>
+        <a href="#goals">研究室目標</a>
       </div>
     </nav>
 
-    <section class="hero-inner">
-      <p class="eyebrow">Department of Business Management · Tzu Chi University</p>
-      <h1>智慧商情研究室</h1>
-      <h2>Smart Business Intelligence Lab <span>(SBI Lab)</span></h2>
-      <p class="motto">Learn. Analyze. Innovate.</p>
+    <section id="top" class="hero-inner">
+      <p class="eyebrow">慈濟大學 · 智慧永續管理學院 · 經營管理學系</p>
+      <h1>好玩實驗室</h1>
       <p class="vision">來打造一個可參訪的好玩實驗室吧</p>
+
+      <div class="formal-name" aria-label="正式名稱">
+        <p>智慧商情研究室</p>
+        <p>Smart Business Intelligence Lab <span>(SBI Lab)</span></p>
+      </div>
+
+      <p class="motto">Explore · Learn · Think · Create · Practice</p>
 
       <div class="hero-actions">
         <a class="primary-btn" href="#projects">瀏覽學生作品</a>
@@ -37,6 +39,20 @@
   </header>
 
   <main>
+    <section id="projects" class="section projects-section">
+      <div class="section-heading split-heading">
+        <div>
+          <p class="section-kicker">Student Works</p>
+          <h2>學生作品</h2>
+        </div>
+        <p class="section-note">此區資料已資料庫化；日後增刪作品與版本，只需修改 Supabase 資料表。</p>
+      </div>
+
+      <div id="projectList" class="project-list" aria-live="polite">
+        <div class="loading-card">正在讀取學生作品資料……</div>
+      </div>
+    </section>
+
     <section id="goals" class="section goals-section">
       <div class="section-heading">
         <p class="section-kicker">Mission</p>
@@ -50,26 +66,14 @@
         <article class="goal-card"><span>05</span><p>參與智慧商情相關計畫或研究</p></article>
       </div>
     </section>
-
-    <section id="projects" class="section projects-section">
-      <div class="section-heading split-heading">
-        <div>
-          <p class="section-kicker">Student Works</p>
-          <h2>學生作品</h2>
-        </div>
-        <p class="section-note">作品以條列方式呈現；點擊作品名稱或版本連結會累計點閱數。</p>
-      </div>
-
-      <div id="projectGrid" class="project-grid" aria-live="polite"></div>
-    </section>
   </main>
 
   <footer class="site-footer">
-    <p>智慧商情研究室｜Smart Business Intelligence Lab (SBI Lab)</p>
+    <p>好玩實驗室｜智慧商情研究室｜Smart Business Intelligence Lab (SBI Lab)</p>
     <p>Department of Business Management, Tzu Chi University</p>
   </footer>
 
-  <script src="config.js"></script>
-  <script src="assets/js/app.js?v=7"></script>
+  <script src="config.js?v=8"></script>
+  <script src="assets/js/app.js?v=8"></script>
 </body>
 </html>

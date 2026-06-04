@@ -1,138 +1,115 @@
-# P101 智慧商情研究室入口網站 System Specification
+# P101 v8 系統規格書
 
-## 1. Project Identification
+## 1. 系統名稱
 
-- Project Code: P101
-- System Name: 智慧商情研究室入口網站
-- English Name: Smart Business Intelligence Lab Portal
-- Institutional Unit: Department of Business Management, Tzu Chi University
-- Deployment Model: GitHub Pages + Supabase
+P101 好玩實驗室入口網站
 
-## 2. Design Style
+## 2. 系統目的
 
-本版改採「創創基地風」，參考研究室入口海報的視覺語言，整合三種方向：
+建立一個可參訪、可展示、可累積學生作品的研究室入口網站。網站以 GitHub Pages 作為靜態前端，以 Supabase 作為資料庫與點閱數後端。
 
-1. 日系教育空間風：大量留白、柔和自然光、米白背景、溫暖學習語氣。
-2. 北歐共同工作空間風：淺木色、植栽感、明亮共享空間與開放協作氛圍。
-3. 台灣公共教育設計風：柔和彩色點綴、手繪式裝飾、友善導覽與成果牆概念。
+## 3. 前端功能
 
-此版只調整前端視覺風格，不變更資料庫 schema 與 Edge Function 邏輯。
+### 3.1 首頁標題
 
-## 3. Functional Scope
+- 主標題：好玩實驗室
+- 副標：來打造一個可參訪的好玩實驗室吧
+- 第二層正式名稱：智慧商情研究室 / Smart Business Intelligence Lab (SBI Lab)
 
-### 3.1 Static Portal
+### 3.2 學生作品區
 
-首頁包含：
-
-- 研究室名稱
-- 英文名稱
-- 標語
-- 所屬單位
-- 研究室目標
-- 學生作品條列清單
-
-### 3.2 Student Project List
-
-學生作品採條列式呈現，適合後續作品數量增加。每個作品項目包含：
+學生作品區由資料庫動態載入，包含：
 
 - 專案編號
-- 專案名稱，可直接超連結至目前展示版
+- 作品名稱
+- 作品超連結
 - 點閱數
-- 簡介
-- 歷史版本；使用 HTML details/summary，點選後才展開
+- 作品簡介
+- 歷史版本
+- 各版本連結與點閱數
 
-### 3.3 View Counter
+### 3.3 研究室目標區
 
-計數對象：
+靜態顯示五項研究室目標。
 
-- 主網頁：`P101_MAIN_PAGE`
-- 各作品版本，例如：`P101_V01`、`P104_V01`、`P02_V01`
+## 4. 資料庫設計
 
-主網頁載入後自動累計主頁點閱。使用者點擊作品名稱或版本連結時，先呼叫 Edge Function 更新點閱數，再開啟目標網站。
+### 4.1 `P101_Projects`
 
-## 4. Database Design
-
-### 4.1 `P101_ViewCounters`
-
-用途：儲存各 counter 目前累計值。
+儲存學生作品主資料。
 
 主要欄位：
 
-- `counter_key`: counter 主鍵，例如 `P101_MAIN_PAGE`
-- `project_code`: 專案代號
-- `version_code`: 版本代號，可為 null
-- `target_type`: `page` 或 `version`
-- `title`: 顯示名稱
-- `target_url`: 連結網址
-- `view_count`: 累計點閱數
-- `created_at`, `updated_at`: 建立與更新時間
+- `project_code`
+- `project_name`
+- `short_description`
+- `history_label`
+- `sort_order`
+- `is_active`
 
-### 4.2 `P101_ViewEvents`
+### 4.2 `P101_ProjectVersions`
 
-用途：保留每次點閱事件紀錄，方便後續分析。
+儲存作品版本資料。
 
 主要欄位：
 
-- `id`: 流水號
-- `counter_key`: 對應 `P101_ViewCounters`
-- `target_type`: `page` 或 `version`
-- `referrer`: 來源頁
-- `session_id`: 前端產生的匿名 session id
-- `user_agent`: 瀏覽器資訊
-- `ip_address`: Edge Function 取得的 IP
-- `created_at`: 點閱時間
+- `version_key`
+- `project_code`
+- `version_code`
+- `version_label`
+- `version_note`
+- `target_url`
+- `counter_key`
+- `is_latest`
+- `sort_order`
+- `is_active`
 
-## 5. Security Model
+### 4.3 `P101_ViewCounters`
 
-- `P101_ViewCounters`：允許 public select，供首頁顯示點閱數。
-- `P101_ViewEvents`：不開放 public insert，由 Edge Function 使用 service role 寫入。
-- 前端只放 anon public key，不放 service_role key。
-- Edge Function 使用 Supabase 內建環境變數 `SUPABASE_URL` 與 `SUPABASE_SERVICE_ROLE_KEY`。
+儲存點閱數彙總。
 
-## 6. Edge Function
+主要欄位：
 
-- Function Name: `P101_increment_counter`
-- Deployment Method: Supabase Dashboard manual paste
-- No shared folder
-- No CLI
-- No npx deploy
+- `counter_key`
+- `project_code`
+- `version_key`
+- `target_type`
+- `title`
+- `target_url`
+- `view_count`
 
-支援 action：
+### 4.4 `P101_ViewEvents`
 
-1. `list_counters`: 讀取所有 counter。
-2. `increment`: 更新指定 counter 並寫入事件紀錄。
+儲存每次點擊事件紀錄。
 
-## 7. Frontend Configuration
+主要欄位：
 
-正式部署時需將：
+- `id`
+- `counter_key`
+- `target_type`
+- `referrer`
+- `session_id`
+- `user_agent`
+- `ip_address`
+- `created_at`
+
+## 5. Edge Function
+
+Function 名稱：
 
 ```text
-config.sample.js → config.js
+P101_increment_counter
 ```
 
-並填入：
+支援 actions：
 
-```js
-window.P101_CONFIG = {
-  SUPABASE_URL: "https://your-project-id.supabase.co",
-  SUPABASE_ANON_KEY: "your-anon-public-key",
-  COUNTER_FUNCTION: "P101_increment_counter"
-};
-```
+- `list_projects`：讀取啟用中的學生作品、版本與點閱數。
+- `list_counters`：讀取點閱數。
+- `increment`：累加指定 counter。
 
-## 8. Versioning Rule
+## 6. 安全設計
 
-後續若新增版本，需同步修改：
-
-1. `assets/js/app.js` 的 `projects` 陣列。
-2. `sql/01_reset_create_P101_tables.sql` 的 seed data。
-3. 若使用既有資料庫且不想清空點閱數，請另外以 insert 方式補入新 counter，而不要執行 reset SQL。
-
-若只新增一個作品或版本，不一定要 reset 全部資料；可另寫 insert SQL。但本 ZIP 為乾淨重建版，因此 SQL 會刪除舊表重建。
-
-
-## 9. Current Student Works in This Version
-
-- P101 校園空間查詢系統：`P101_V01`
-- P104 WhisperTour：`P104_V01`
-- P02 腦力激盪系統：`P02_V01`
+- 前端只放 anon key。
+- 寫入點閱數與事件紀錄由 Edge Function 使用 service role 執行。
+- `P101_ViewEvents` 不開放 public 直接 insert。
+- RLS 啟用於所有 P101 資料表。

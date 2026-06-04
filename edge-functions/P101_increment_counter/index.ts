@@ -1,6 +1,6 @@
 // P101_increment_counter
 // Supabase Dashboard 可直接貼上版：不使用 _shared，不使用 CLI/npx deploy。
-// Environment variables required in Supabase Edge Function runtime:
+// Required Edge Function secrets:
 // SUPABASE_URL
 // SUPABASE_SERVICE_ROLE_KEY
 
@@ -20,38 +20,73 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function createAdminClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+  return createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      return jsonResponse({ error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" }, 500);
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
-
+    const supabase = createAdminClient();
     const body = await req.json().catch(() => ({}));
     const action = body.action || "increment";
+
+    if (action === "list_projects") {
+      const { data: projects, error: projectError } = await supabase
+        .from("P101_Projects")
+        .select("project_code, project_name, short_description, history_label, sort_order, is_active")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (projectError) return jsonResponse({ error: projectError.message }, 500);
+
+      const { data: versions, error: versionError } = await supabase
+        .from("P101_ProjectVersions")
+        .select("version_key, project_code, version_code, version_label, version_note, target_url, counter_key, is_latest, sort_order, is_active")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (versionError) return jsonResponse({ error: versionError.message }, 500);
+
+      const { data: counters, error: counterError } = await supabase
+        .from("P101_ViewCounters")
+        .select("counter_key, view_count");
+
+      if (counterError) return jsonResponse({ error: counterError.message }, 500);
+
+      const versionGroups = new Map<string, unknown[]>();
+      for (const version of versions || []) {
+        const list = versionGroups.get(version.project_code) || [];
+        list.push(version);
+        versionGroups.set(version.project_code, list);
+      }
+
+      const merged = (projects || []).map((project) => ({
+        ...project,
+        versions: versionGroups.get(project.project_code) || [],
+      }));
+
+      return jsonResponse({ projects: merged, counters: counters || [] });
+    }
 
     if (action === "list_counters") {
       const { data, error } = await supabase
         .from("P101_ViewCounters")
-        .select("counter_key, project_code, version_code, target_type, title, target_url, view_count, updated_at")
+        .select("counter_key, project_code, version_key, target_type, title, target_url, view_count, updated_at")
         .order("counter_key", { ascending: true });
 
       if (error) return jsonResponse({ error: error.message }, 500);
       return jsonResponse({ counters: data || [] });
     }
 
-    if (action !== "increment") {
-      return jsonResponse({ error: "Unknown action" }, 400);
-    }
+    if (action !== "increment") return jsonResponse({ error: "Unknown action" }, 400);
 
     const counterKey = String(body.counter_key || "").trim();
     const targetType = String(body.target_type || "version").trim();
@@ -61,18 +96,34 @@ serve(async (req) => {
     const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 
     if (!counterKey) return jsonResponse({ error: "Missing counter_key" }, 400);
-    if (!["page", "version"].includes(targetType)) {
-      return jsonResponse({ error: "Invalid target_type" }, 400);
-    }
+    if (!["page", "version"].includes(targetType)) return jsonResponse({ error: "Invalid target_type" }, 400);
 
-    const { data: current, error: readError } = await supabase
+    let { data: current, error: readError } = await supabase
       .from("P101_ViewCounters")
-      .select("counter_key, view_count")
+      .select("counter_key, project_code, version_key, target_type, title, target_url, view_count")
       .eq("counter_key", counterKey)
-      .single();
+      .maybeSingle();
 
-    if (readError || !current) {
-      return jsonResponse({ error: `Counter not found: ${counterKey}` }, 404);
+    if (readError) return jsonResponse({ error: readError.message }, 500);
+
+    // 防呆：如果未來新增版本時忘記先建立 counter，系統會自動建立基本 counter。
+    if (!current) {
+      const { data: inserted, error: insertCounterError } = await supabase
+        .from("P101_ViewCounters")
+        .insert({
+          counter_key: counterKey,
+          project_code: counterKey.split("_")[0] || "P101",
+          version_key: null,
+          target_type: targetType,
+          title: counterKey,
+          target_url: null,
+          view_count: 0,
+        })
+        .select("counter_key, project_code, version_key, target_type, title, target_url, view_count")
+        .single();
+
+      if (insertCounterError) return jsonResponse({ error: insertCounterError.message }, 500);
+      current = inserted;
     }
 
     const nextCount = Number(current.view_count || 0) + 1;
@@ -97,8 +148,9 @@ serve(async (req) => {
         ip_address: ipAddress,
       });
 
+    // 點閱數已更新；事件紀錄若失敗，只回傳 warning，不讓前端整體失敗。
     if (eventError) {
-      return jsonResponse({ error: eventError.message }, 500);
+      return jsonResponse({ counter: updated, warning: eventError.message });
     }
 
     return jsonResponse({ counter: updated });
