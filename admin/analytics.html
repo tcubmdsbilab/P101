@@ -1,0 +1,35 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>P101 使用分析後台</title>
+<style>body{font:16px system-ui,"Noto Sans TC",sans-serif;background:#f3f7fa;color:#18374a;margin:0}header{background:#19435b;color:white;padding:22px}main{max-width:1100px;margin:auto;padding:16px}section{background:white;padding:18px;margin:14px 0;border-radius:12px;border:1px solid #dce6eb}input,select,button{padding:9px;margin:4px;font:inherit}button{background:#17658b;color:white;border:0;border-radius:6px;cursor:pointer}.stats{display:flex;flex-wrap:wrap;gap:12px}.stat{background:#eaf3f8;padding:18px;min-width:130px;border-radius:8px}.stat b{display:block;font-size:25px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left}div.scroll{overflow:auto}footer{text-align:center;padding:18px}#notice{color:#9b421e}</style></head>
+<body><header><h2>P101 · P 系列網站使用分析</h2>Web Analytics V0.1 · SBI-P-SDS v3.6</header><main>
+<section><h3>管理者登入</h3><p>使用既有 Supabase Auth；僅 P101 授權統計管理者可查詢。</p><input id="email" type="email" placeholder="Email" autocomplete="username"><input id="password" type="password" placeholder="密碼" autocomplete="current-password"><button id="toggle">顯示密碼</button><button id="login">登入</button><button id="logout">登出</button><p id="notice"></p></section>
+<section><h3>查詢</h3><label>開始 <input id="from" type="date"></label><label>結束 <input id="to" type="date"></label><label>專案 <select id="project"><option value="">全部</option></select></label><button id="load">查詢</button><button id="csv">匯出 CSV</button></section>
+<section><h3>總覽</h3><div class="stats"><div class="stat">瀏覽次數<b id="views">—</b></div><div class="stat">逐日訪客估計加總<b id="visitors">—</b></div><div class="stat">工作階段<b id="sessions">—</b></div><div class="stat">平均可見時間<b id="visible">—</b></div></div><p>逐日訪客估計加總並非整段期間的不重複訪客數。</p></section>
+<section><h3>專案排行</h3><div class="scroll"><table><thead><tr><th>專案</th><th>瀏覽</th><th>手機</th><th>桌機</th><th>平板</th></tr></thead><tbody id="rank"></tbody></table></div></section>
+<section><h3>每日資料</h3><div class="scroll"><table><thead><tr><th>日期</th><th>專案</th><th>瀏覽</th><th>訪客估計</th><th>平均可見秒數</th></tr></thead><tbody id="daily"></tbody></table></div></section>
+<section><h3>來源網站</h3><div class="scroll"><table><thead><tr><th>專案</th><th>來源網域</th><th>瀏覽</th></tr></thead><tbody id="refs"></tbody></table></div></section>
+</main><footer>慈濟大學｜經營管理學系｜<a href="https://tcubmdsbilab.github.io/P101/">好玩實驗室</a> · Web Analytics V0.1 · SBI-P-SDS v3.6</footer>
+<script src="../config.js"></script>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL=window.P101_CONFIG?.SUPABASE_URL||'',KEY=window.P101_CONFIG?.SUPABASE_ANON_KEY||'';
+const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString('zh-TW'),sec=n=>Number.isFinite(n)?Math.round(n)+' 秒':'—';
+const client=SUPABASE_SUPABASE_URL.startsWith('https://')&&!SUPABASE_SUPABASE_URL.includes('__')&&KEY.length>10?createClient(SUPABASE_URL,KEY,{auth:{storageKey:'P101-analytics-admin-auth'}}):null;
+let rows=[];const status=s=>$('notice').textContent=s;
+const date=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(t);
+$('to').value=date(new Date());$('from').value=date(new Date(Date.now()-29*86400000));
+if(!client)status('尚未設定 P101 Supabase 公開連線參數，目前為待整合版本。');
+$('toggle').onclick=()=>{let x=$('password');x.type=x.type==='password'?'text':'password';$('toggle').textContent=x.type==='password'?'顯示密碼':'隱藏密碼'};
+$('login').onclick=async()=>{if(!client)return;const {error}=await client.auth.signInWithPassword({email:$('email').value,password:$('password').value});$('password').value='';status(error?error.message:'已登入，請查詢。')};
+$('logout').onclick=async()=>{if(client)await client.auth.signOut({scope:'local'});rows=[];status('已登出')};
+function render(data,refs){const totals={views:0,visitors:0,sessions:0,visible:0},groups=new Map();
+for(const r of data){totals.views+=+r.page_views;totals.visitors+=+r.visitors;totals.sessions+=+r.sessions;totals.visible+=(+r.average_visible_seconds||0)*(+r.sessions||0);
+let g=groups.get(r.project_code)||{views:0,mobile:0,desktop:0,tablet:0};g.views+=+r.page_views;g.mobile+=+r.mobile_views;g.desktop+=+r.desktop_views;g.tablet+=+r.tablet_views;groups.set(r.project_code,g)}
+$('views').textContent=fmt(totals.views);$('visitors').textContent=fmt(totals.visitors);$('sessions').textContent=fmt(totals.sessions);$('visible').textContent=sec(totals.sessions?totals.visible/totals.sessions:NaN);
+function table(id,records,cols){const tbody=$(id);tbody.replaceChildren();for(const r of records){const tr=document.createElement('tr');for(const k of cols){const td=document.createElement('td');td.textContent=String(r[k]??'');tr.append(td)}tbody.append(tr)}}
+table('rank',[...groups].sort((a,b)=>b[1].views-a[1].views).map(([project,g])=>({project,views:fmt(g.views),mobile:fmt(g.mobile),desktop:fmt(g.desktop),tablet:fmt(g.tablet)})),['project','views','mobile','desktop','tablet']);
+table('daily',data.map(r=>({...r,page_views:fmt(r.page_views),visitors:fmt(r.visitors)})),['day','project_code','page_views','visitors','average_visible_seconds']);
+table('refs',refs,['project_code','referrer_host','page_views']);
+for(const p of groups.keys()){if(![...$('project').options].some(o=>o.value===p)){let opt=document.createElement('option');opt.value=p;opt.textContent=p;$('project').append(opt)}}}
+$('load').onclick=async()=>{if(!client)return;const a=$('from').value,b=$('to').value,p=$('project').value||null;if(!a||!b||a>b){status('日期範圍不正確');return}status('查詢中');const args={date_from:a,date_to:b,project_filter:p};const r=await client.rpc('P101_AnalyticsReport',args);if(r.error){status('查詢失敗或權限不足：'+r.error.message);return}const q=await client.rpc('P101_AnalyticsReferrers',args);if(q.error){status('來源查詢失敗：'+q.error.message);return}rows=r.data||[];render(rows,q.data||[]);status('查詢完成；完整指標僅涵蓋仍保留的原始事件。')};
+$('csv').onclick=()=>{if(!rows.length)return status('沒有可匯出的資料');const fields=Object.keys(rows[0]);const quote=x=>'"'+String(x??'').replaceAll('"','""')+'"';const csv='\ufeff'+fields.join(',')+'\n'+rows.map(r=>fields.map(k=>quote(r[k])).join(',')).join('\n');const u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download='P101_Analytics.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
+</script></body></html>
