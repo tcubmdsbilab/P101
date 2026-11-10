@@ -13,7 +13,7 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL=window.P101_CONFIG?.SUPABASE_URL||'',KEY=window.P101_CONFIG?.SUPABASE_ANON_KEY||'';
 const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString('zh-TW'),sec=n=>Number.isFinite(n)?Math.round(n)+' 秒':'—';
-const client=SUPABASE_SUPABASE_URL.startsWith('https://')&&!SUPABASE_SUPABASE_URL.includes('__')&&KEY.length>10?createClient(SUPABASE_URL,KEY,{auth:{storageKey:'P101-analytics-admin-auth'}}):null;
+const client=SUPABASE_URL.startsWith('https://')&&!SUPABASE_URL.includes('__')&&KEY.length>10?createClient(SUPABASE_URL,KEY,{auth:{storageKey:'P101-analytics-admin-auth'}}):null;
 let rows=[];const status=s=>$('notice').textContent=s;
 const date=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(t);
 $('to').value=date(new Date());$('from').value=date(new Date(Date.now()-29*86400000));
